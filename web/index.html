@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Railway Reservation System (C)</title>
+<meta name="description" content="A railway reservation system written in pure C, compiled to WebAssembly so it runs in your browser.">
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #ffffff; --text: #1c2330; --muted: #5d677a;
+    --accent: #0b5cad; --term-bg: #10151f; --term-text: #d7e0ee; --term-dim: #8a96ab;
+    --border: #dfe3ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e1218; --card: #171d27; --text: #e6ebf3; --muted: #9aa5b8;
+            --accent: #5aa2ee; --term-bg: #0a0d13; --border: #2a3342; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .chip { background: var(--card); border: 1px solid var(--border); border-radius: 999px;
+          padding: 4px 12px; font-size: .85rem; }
+  .term { background: var(--term-bg); border-radius: 10px; overflow: hidden;
+          border: 1px solid var(--border); }
+  .bar { display: flex; justify-content: space-between; align-items: center;
+         padding: 8px 12px; color: var(--term-dim); font-size: .8rem; background: rgba(255,255,255,.04); }
+  #out { margin: 0; padding: 12px; height: 62vh; min-height: 320px; overflow-y: auto;
+         color: var(--term-text); font: 14px/1.35 ui-monospace, Consolas, "Courier New", monospace;
+         white-space: pre; overflow-x: auto; }
+  #inputRow { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+              border-top: 1px solid rgba(255,255,255,.08); }
+  #label { color: var(--term-text); font: 14px ui-monospace, Consolas, monospace; white-space: pre; }
+  #inp { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+         color: #7ee787; font: 14px ui-monospace, Consolas, monospace; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+           padding: 6px 14px; font: inherit; font-size: .85rem; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--term-dim); border: 1px solid rgba(255,255,255,.2); }
+  button:disabled { opacity: .5; cursor: default; }
+  .note { color: var(--muted); font-size: .9rem; margin-top: 16px; }
+  a { color: var(--accent); }
+  footer { margin-top: 28px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Railway Reservation System</h1>
+  <p class="sub">Written in pure C and compiled to WebAssembly. Everything below is the real C program running in your browser.</p>
+  <div class="chips">
+    <span class="chip">Ticket booking</span>
+    <span class="chip">Seat availability</span>
+    <span class="chip">Passenger information</span>
+    <span class="chip">Ticket cancellation</span>
+  </div>
+
+  <div class="term">
+    <div class="bar">
+      <span>railway (C &rarr; WebAssembly)</span>
+      <button class="ghost" id="restart" type="button">Restart</button>
+    </div>
+    <pre id="out" aria-live="polite"></pre>
+    <form id="inputRow" autocomplete="off">
+      <span id="label"></span>
+      <input id="inp" type="text" spellcheck="false" autocapitalize="off" aria-label="Type your answer here" disabled>
+      <button type="submit" id="send" disabled>Enter</button>
+    </form>
+  </div>
+
+  <p class="note">Type your answer and press Enter. Bookings are saved in this browser only (localStorage), so they are still here when you come back.
+     <a href="#" id="clear">Clear saved bookings</a></p>
+
+  <footer>
+    <a id="repo" href="https://github.com/">Source code on GitHub</a>
+  </footer>
+</div>
+
+<script src="railway.js"></script>
+<script>
+(function () {
+  "use strict";
+  var KEY = "railway_bookings_v1";
+  var out = document.getElementById("out");
+  var form = document.getElementById("inputRow");
+  var inp = document.getElementById("inp");
+  var send = document.getElementById("send");
+  var label = document.getElementById("label");
+  var resolver = null;
+  var currentPrompt = "";
+
+  function println(text) {
+    out.appendChild(document.createTextNode(text + "\n"));
+    out.scrollTop = out.scrollHeight;
+  }
+
+  function setEnabled(on) {
+    inp.disabled = !on;
+    send.disabled = !on;
+    if (on) inp.focus();
+  }
+
+  /* The C program calls this whenever it wants a line of input. */
+  function getLine(prompt) {
+    return new Promise(function (resolve) {
+      var m = /^(\n*)([\s\S]*)$/.exec(prompt);
+      for (var i = 0; i < m[1].length; i++) println("");
+      currentPrompt = m[2];
+      label.textContent = currentPrompt;
+      resolver = resolve;
+      setEnabled(true);
+    });
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!resolver) return;
+    var value = inp.value;
+    inp.value = "";
+    println(currentPrompt + value);
+    label.textContent = "";
+    setEnabled(false);
+    var r = resolver;
+    resolver = null;
+    r(value);
+  });
+
+  function storageGet() {
+    try { return localStorage.getItem(KEY); } catch (e) { return null; }
+  }
+  function storageSet(text) {
+    try { localStorage.setItem(KEY, text); } catch (e) { /* private mode: keep in memory only */ }
+  }
+
+  document.getElementById("restart").addEventListener("click", function () { location.reload(); });
+  document.getElementById("clear").addEventListener("click", function (e) {
+    e.preventDefault();
+    if (confirm("Delete all saved bookings in this browser?")) {
+      try { localStorage.removeItem(KEY); } catch (err) { /* ignore */ }
+      location.reload();
+    }
+  });
+
+  /* Link to the repo, derived from the GitHub Pages address (user.github.io/repo). */
+  (function () {
+    var host = location.hostname, repo = location.pathname.split("/")[1];
+    if (/\.github\.io$/.test(host) && repo) {
+      document.getElementById("repo").href =
+        "https://github.com/" + host.split(".")[0] + "/" + repo;
+    }
+  })();
+
+  if (typeof createRailway !== "function") {
+    println("railway.js was not found. This page needs the WebAssembly build (run `make web`).");
+    return;
+  }
+
+  createRailway({
+    print: println,
+    printErr: function (t) { console.warn(t); },
+    getLine: getLine,
+    storageGet: storageGet,
+    storageSet: storageSet,
+    onExit: function () {
+      label.textContent = "";
+      setEnabled(false);
+      println("");
+      println("[Program ended. Click Restart to run it again.]");
+    }
+  }).catch(function (err) {
+    println("Could not start the program: " + err);
+  });
+})();
+</script>
+</body>
+</html>

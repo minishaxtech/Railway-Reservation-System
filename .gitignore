@@ -1,0 +1,11 @@
+# Build output
+railway
+railway.exe
+*.o
+
+# Runtime data (created when you book tickets)
+bookings.txt
+
+# WebAssembly build output (created by CI)
+web/railway.js
+web/railway.wasm
