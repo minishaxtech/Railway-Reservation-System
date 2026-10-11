@@ -4,76 +4,109 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Railway Reservation System (C)</title>
-<meta name="description" content="A Railway Reservation System written in C, compiled to WebAssembly so it runs in browser.">
+<meta name="description" content="A railway reservation system written in pure C, compiled to WebAssembly so it runs in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f4f5f7; --card: #ffffff; --text: #1c2330; --muted: #5d677a;
-    --accent: #0b5cad; --term-bg: #10151f; --term-text: #d7e0ee; --term-dim: #8a96ab;
-    --border: #dfe3ea;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0e1218; --card: #171d27; --text: #e6ebf3; --muted: #9aa5b8;
-            --accent: #5aa2ee; --term-bg: #0a0d13; --border: #2a3342; }
+    --bg: #f1eaff; --card: #ffffff; --ink: #2d2748; --muted: #6d6690;
+    --violet: #8d6df0; --violet-dark: #6a49d8; --violet-soft: #f1eaff; --field: #f7f3ff;
+    --peach: #ffd9cc; --peach-dot: #ff8f6b; --mint: #cdf3ea; --mint-dot: #3fbf9f;
+    --lilac: #e2d8ff; --lilac-dot: #8d6df0; --sun: #fff0b8; --sun-dot: #e6b422;
+    --shadow: 0 14px 32px rgba(112, 84, 190, 0.14);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 1.6rem; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 16px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-  .chip { background: var(--card); border: 1px solid var(--border); border-radius: 999px;
-          padding: 4px 12px; font-size: .85rem; }
-  .term { background: var(--term-bg); border-radius: 10px; overflow: hidden;
-          border: 1px solid var(--border); }
-  .bar { display: flex; justify-content: space-between; align-items: center;
-         padding: 8px 12px; color: var(--term-dim); font-size: .8rem; background: rgba(255,255,255,.04); }
-  #out { margin: 0; padding: 12px; height: 62vh; min-height: 320px; overflow-y: auto;
-         color: var(--term-text); font: 14px/1.35 ui-monospace, Consolas, "Courier New", monospace;
-         white-space: pre; overflow-x: auto; }
-  #inputRow { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-              border-top: 1px solid rgba(255,255,255,.08); }
-  #label { color: var(--term-text); font: 14px ui-monospace, Consolas, monospace; white-space: pre; }
-  #inp { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
-         color: #7ee787; font: 14px ui-monospace, Consolas, monospace; }
-  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px;
-           padding: 6px 14px; font: inherit; font-size: .85rem; cursor: pointer; }
-  button.ghost { background: transparent; color: var(--term-dim); border: 1px solid rgba(255,255,255,.2); }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 16px/1.5 "Nunito", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 36px 24px 48px;
+          display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; align-items: start; }
+  .card { background: var(--card); border-radius: 28px; box-shadow: var(--shadow); }
+
+  .intro { padding: 24px; }
+  .logo { width: 52px; height: 52px; border-radius: 18px; background: var(--violet);
+          display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  h1 { font-size: 30px; font-weight: 800; line-height: 1.1; margin: 0; }
+
+  .pills { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .pill { border-radius: 20px; padding: 12px 18px; font-weight: 800; font-size: 16px;
+          display: flex; align-items: center; gap: 12px; }
+  .pill i { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .p1 { background: var(--peach); } .p1 i { background: var(--peach-dot); }
+  .p2 { background: var(--mint); }  .p2 i { background: var(--mint-dot); }
+  .p3 { background: var(--lilac); } .p3 i { background: var(--lilac-dot); }
+  .p4 { background: var(--sun); }   .p4 i { background: var(--sun-dot); }
+
+  .term { overflow: hidden; display: flex; flex-direction: column; }
+  .bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px 8px; }
+  .bar span { font-weight: 800; font-size: 15px; color: var(--muted); }
+  button { font: inherit; cursor: pointer; border: 0; }
+  #restart { background: var(--violet-soft); color: var(--violet-dark); border-radius: 999px;
+             padding: 5px 16px; font-weight: 800; font-size: 13px; }
+  #restart:hover { background: var(--lilac); }
+  #out { margin: 0; padding: 6px 24px; height: 56vh; min-height: 320px; overflow: auto;
+         font: 14px/1.75 "DM Mono", ui-monospace, Consolas, "Courier New", monospace;
+         white-space: pre; color: var(--ink); }
+  #inputRow { display: flex; align-items: center; gap: 12px; margin: 8px 20px 20px;
+              background: var(--field); border-radius: 20px; padding: 10px 14px 10px 20px; }
+  #label { font: 14px "DM Mono", ui-monospace, Consolas, monospace; white-space: pre; color: var(--ink); }
+  #inp { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--violet-dark);
+         font: 500 14px "DM Mono", ui-monospace, Consolas, monospace; }
+  #send { background: var(--violet); color: #fff; border-radius: 999px; padding: 6px 20px;
+          font-weight: 800; font-size: 14px; }
+  #send:hover:not(:disabled) { background: var(--violet-dark); }
   button:disabled { opacity: .5; cursor: default; }
-  .note { color: var(--muted); font-size: .9rem; margin-top: 16px; }
-  a { color: var(--accent); }
-  footer { margin-top: 28px; color: var(--muted); font-size: .85rem; }
+  #inp:focus-visible, button:focus-visible { outline: 3px solid var(--violet); outline-offset: 2px; }
+
+  .note { color: var(--muted); font-size: 14px; font-weight: 600; margin: 16px 8px 0; }
+  a { color: var(--violet-dark); }
+  footer { margin: 8px 8px 0; color: var(--muted); font-size: 14px; font-weight: 600; }
+
+  @media (max-width: 820px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); padding: 20px 16px 36px; gap: 20px; }
+    #out { height: 50vh; padding: 6px 16px; }
+    h1 { font-size: 26px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Railway Reservation System</h1>
-  <div class="chips">
-    <span class="chip">Ticket booking</span>
-    <span class="chip">Seat availability</span>
-    <span class="chip">Passenger information</span>
-    <span class="chip">Ticket cancellation</span>
-  </div>
-
-  <div class="term">
-    <div class="bar">
-      <span>railway (C &rarr; WebAssembly)</span>
-      <button class="ghost" id="restart" type="button">Restart</button>
+  <div>
+    <div class="card intro">
+      <div class="logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="5" y="3" width="14" height="14" rx="4"></rect>
+          <path d="M5 11h14"></path>
+          <path d="M8 21l2-4M16 21l-2-4"></path>
+        </svg>
+      </div>
+      <h1>Railway Reservation System</h1>
     </div>
-    <pre id="out" aria-live="polite"></pre>
-    <form id="inputRow" autocomplete="off">
-      <span id="label"></span>
-      <input id="inp" type="text" spellcheck="false" autocapitalize="off" aria-label="Type your answer here" disabled>
-      <button type="submit" id="send" disabled>Enter</button>
-    </form>
+    <div class="pills">
+      <div class="pill p1"><i></i>Ticket booking</div>
+      <div class="pill p2"><i></i>Seat availability</div>
+      <div class="pill p3"><i></i>Passenger information</div>
+      <div class="pill p4"><i></i>Ticket cancellation</div>
+    </div>
   </div>
 
-  <p class="note">Type your answer and press Enter. Bookings are saved in this browser only (localStorage), so they are still here when you come back.
-     <a href="#" id="clear">Clear saved bookings</a></p>
-
-  <footer>
-    <a id="repo" href="https://github.com/">Source code on GitHub</a>
-  </footer>
+  <div>
+    <div class="card term">
+      <div class="bar">
+        <span>railway.c</span>
+        <button id="restart" type="button">Restart</button>
+      </div>
+      <pre id="out" aria-live="polite"></pre>
+      <form id="inputRow" autocomplete="off">
+        <span id="label"></span>
+        <input id="inp" type="text" spellcheck="false" autocapitalize="off" aria-label="Type your answer here" disabled>
+        <button type="submit" id="send" disabled>Enter</button>
+      </form>
+    </div>
+    <p class="note">Type your answer and press Enter. Bookings are saved in this browser only, so they are still here when you come back.
+       <a href="#" id="clear">Clear saved bookings</a></p>
+    <footer><a id="repo" href="https://github.com/">Source code on GitHub</a></footer>
+  </div>
 </div>
 
 <script src="railway.js"></script>
